@@ -1,5 +1,5 @@
 class Exemplo:
-    def __init__ (self, id: int, p_sist: float, p_diast: float, q_pa: float, pulso, respiracao, gravidade, rotulo: str = ""):
+    def __init__ (self, id: int, p_sist: float, p_diast: float, q_pa: float, pulso: float, respiracao: float, gravidade: float, rotulo: int = -1):
         self.id = id
         self.p_sist = p_sist
         self.p_diast = p_diast
@@ -18,10 +18,10 @@ def parse_exemplo(line: str) -> Exemplo:
     p_sist = float(fields[1])
     p_diast = float(fields[2])
     q_pa = float(fields[3])
-    pulso = int(fields[4])
-    respiracao = int(fields[5])
-    gravidade = int(fields[6])
-    rotulo = fields[7] if len(fields) > 7 else ""
+    pulso = float(fields[4])
+    respiracao = float(fields[5])
+    gravidade = float(fields[6])
+    rotulo = int(fields[7]) if len(fields) > 7 else -1
     
     return Exemplo(id, p_sist, p_diast, q_pa, pulso, respiracao, gravidade, rotulo)
 
