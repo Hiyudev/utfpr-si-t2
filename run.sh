@@ -6,4 +6,10 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
+# Check if the first argument is not "plot"
+if [ "$1" == "plot" ]; then
+    python3 plot.py
+    exit 0
+fi
+
 python3 main.py "$1" "$2"
