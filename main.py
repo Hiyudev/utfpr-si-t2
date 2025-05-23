@@ -71,6 +71,33 @@ def random_forest(train_set: list[Exemplo], test_set: list[Exemplo]):
     ]
     return results
 
+def redes(train_set: list[Exemplo], test_set: list[Exemplo]):
+    """
+    Algoritmo Redes Neurais
+    """
+    redes_regressor = []
+    redes_classifier = []
+
+    regressor_results: list[tuple[Exemplo, float]] = []
+    classifier_results: list[tuple[Exemplo, int]] = []
+
+    # for example in test_set:
+    #     classifier_features = [
+    #         example.q_pa, example.pulso, example.respiracao, example.gravidade
+    #     ]
+    #     classifier_prediction = redes_classifier.predict([classifier_features])
+    #     classifier_results.append((example, classifier_prediction[0]))
+        
+    #     regressor_features = [example.q_pa, example.pulso, example.respiracao]
+    #     regressor_prediction = redes_regressor.predict([regressor_features])
+    #     regressor_results.append((example, regressor_prediction[0]))
+
+    # results: tuple[list[tuple[Exemplo, float]], list[tuple[Exemplo, int]]] = [
+    #     regressor_results,
+    #     classifier_results,
+    # ]
+    # return results
+
 
 def analyse(
     algorithm: Callable[[list[Exemplo], list[Exemplo]], tuple[list[tuple[Exemplo, float]], list[tuple[Exemplo, int]]]],
@@ -139,7 +166,7 @@ if __name__ == "__main__":
         elif algorithm_arg == "forest":
             algorithm = random_forest
         elif algorithm_arg == "redes":
-            algorithm = random_forest
+            algorithm = redes
         else:
             print("Argumento inválido. Use 'id3', 'forest' ou 'redes'.")
 

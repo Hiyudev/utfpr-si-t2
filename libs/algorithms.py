@@ -1,11 +1,20 @@
 from sklearn import tree, ensemble
-from libs.input import Exemplo
+from libs.input import Exemplo, get_features_and_targets
 from libs.static import (
     ARG_RANDOM_FOREST_TREES,
     ARG_RANDOM_MAX_FEATURES,
     ARG_RANDOM_MAX_SAMPLES,
 )
-
+from libs.redes import Rede_MLP
+from libs.static import (
+    ACTIVATION_FUNCTION,
+    MAX_EPOCHS, 
+    BIAS,
+    LEARNING_RATE,
+    HIDDEN_LAYERS_SIZE,
+    NEURONS_OUTPUT_LAYER,
+    NEURONS_PER_LAYER
+)
 
 def algorithm_id3_classifier(examples: list[Exemplo]) -> tree.DecisionTreeClassifier:
     decision_tree = tree.DecisionTreeClassifier(
@@ -22,11 +31,7 @@ def algorithm_id3_classifier(examples: list[Exemplo]) -> tree.DecisionTreeClassi
         class_weight=None,
     )
 
-    features = [
-        (example.q_pa, example.pulso, example.respiracao, example.gravidade)
-        for example in examples
-    ]
-    labels = [example.rotulo for example in examples]
+    features, labels = get_features_and_targets(examples, 'classifier')
 
     decision_tree.fit(features, labels)
     return decision_tree
@@ -45,11 +50,7 @@ def algorithm_id3_regressor(examples: list[Exemplo]) -> tree.DecisionTreeRegress
         min_impurity_decrease=0.0,
     )
 
-    features = [
-        (example.q_pa, example.pulso, example.respiracao)
-        for example in examples
-    ]
-    results = [example.gravidade for example in examples]
+    features, results = get_features_and_targets(examples, 'regressor')
 
     decision_tree.fit(features, results)
     return decision_tree
@@ -73,11 +74,7 @@ def algorithm_random_forest_classifier(examples: list[Exemplo]) -> tree.Decision
         max_samples=ARG_RANDOM_MAX_SAMPLES,
     )
 
-    features = [
-        (example.q_pa, example.pulso, example.respiracao, example.gravidade)
-        for example in examples
-    ]
-    labels = [example.rotulo for example in examples]
+    features, labels = get_features_and_targets(examples, 'classifier')
 
     decision_tree.fit(features, labels)
     return decision_tree
@@ -100,11 +97,24 @@ def algorithm_random_forest_regressor(examples: list[Exemplo]) -> tree.DecisionT
         max_samples=ARG_RANDOM_MAX_SAMPLES,
     )
 
-    features = [
-        (example.q_pa, example.pulso, example.respiracao)
-        for example in examples
-    ]
-    results = [example.gravidade for example in examples]
+    features, results = get_features_and_targets(examples, 'regressor')
 
     decision_tree.fit(features, results)
     return decision_tree
+
+def algorithm_neural_network(examples: list[Exemplo], task_type: str):
+    network = Rede_MLP(task_type)
+
+    features, targets = get_features_and_targets(examples, task_type)
+
+    network.create_network(inputs_size=features.shape[1],
+                           n_hidden=NEURONS_PER_LAYER,
+                           n_output=NEURONS_OUTPUT_LAYER,
+                           hidden_layers_size=HIDDEN_LAYERS_SIZE,
+                           bias=BIAS,
+                           activation=ACTIVATION_FUNCTION)
+    
+    
+
+    
+

@@ -38,3 +38,19 @@ def read_data(file_path: str) -> list[Exemplo]:
                 exemplos.append(exemplo)
     
     return exemplos
+
+def get_features_and_targets(examples: list[Exemplo], type: str):
+    if type == 'classifier':
+        features = [
+        (example.q_pa, example.pulso, example.respiracao, example.gravidade)
+        for example in examples
+    ]
+        targets = [example.rotulo for example in examples]
+        return features, targets
+    else:
+        features = [
+        (example.q_pa, example.pulso, example.respiracao)
+        for example in examples
+    ]
+        targets = [example.gravidade for example in examples]
+        return features, targets
