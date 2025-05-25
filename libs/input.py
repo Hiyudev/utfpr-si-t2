@@ -9,6 +9,17 @@ class Exemplo:
         self.gravidade = gravidade
         self.rotulo = rotulo
         
+    @property
+    def features(self) -> list[float]:
+        return {
+            "p_sist": self.p_sist,
+            "p_diast": self.p_diast,
+            "q_pa": self.q_pa,
+            "pulso": self.pulso,
+            "respiracao": self.respiracao,
+            "gravidade": self.gravidade,
+        }
+        
 def parse_exemplo(line: str) -> Exemplo:
     """
     Parse a line of data into an Exemplo object.

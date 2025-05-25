@@ -1,16 +1,30 @@
 import sys
 
+from libs.models.tree import plot_decision_tree
 from libs.static import (
+    ARG_DISCRE_PULSO,
+    ARG_DISCRE_PULSO_GROUPS,
+    ARG_DISCRE_QPA,
+    ARG_DISCRE_QPA_GROUPS,
+    ARG_DISCRE_RESPIRACAO,
+    ARG_DISCRE_RESPIRACAO_GROUPS,
     ARG_KFOLD_REPETITIONS,
     ARG_VALIDATION_PERCENTAGE,
 )
+from libs.models.decision_tree import DecisitionTree
 from libs.algorithms import (
     algorithm_id3_classifier,
     algorithm_id3_regressor,
     algorithm_random_forest_classifier,
     algorithm_random_forest_regressor,
 )
-from libs.data import generate_retencao, generate_kfold
+from libs.data import (
+    discretize_examples,
+    generate_retencao,
+    generate_kfold,
+    generate_discretized_data,
+    DiscretizationMethod,
+)
 from libs.input import Exemplo, read_data
 from typing import Callable
 
@@ -19,26 +33,19 @@ def id3(train_set: list[Exemplo], test_set: list[Exemplo]):
     """
     Algoritmo ID3.
     """
-    decision_tree_classifier = algorithm_id3_classifier(train_set)
-    decision_tree_regressor = algorithm_id3_regressor(train_set)
-
-    regressor_results: list[tuple[Exemplo, float]] = []
+    decision_tree_classifier = DecisitionTree()
+    decision_tree_classifier.fit(train_set, ["q_pa", "pulso", "respiracao"])
     classifier_results: list[tuple[Exemplo, int]] = []
 
-    for example in test_set:
-        classifier_features = [
-            example.q_pa, example.pulso, example.respiracao, example.gravidade
-        ]
-        classifier_prediction = decision_tree_classifier.predict([classifier_features])
-        classifier_results.append((example, classifier_prediction[0]))
+    plot_decision_tree(decision_tree_classifier.root)
 
-        regressor_features = [example.q_pa, example.pulso, example.respiracao]
-        regressor_prediction = decision_tree_regressor.predict([regressor_features])
-        regressor_results.append((example, regressor_prediction[0]))
+    for example in test_set:
+        classifier_prediction = decision_tree_classifier.predict([example])
+        classifier_results.append((example, classifier_prediction[0]))
 
     results: tuple[list[tuple[Exemplo, float]], list[tuple[Exemplo, int]]] = [
         classifier_results,
-        regressor_results,
+        [],
     ]
     return results
 
@@ -50,17 +57,20 @@ def random_forest(train_set: list[Exemplo], test_set: list[Exemplo]):
     # Implementação do algoritmo Random Forest
     random_forest_classifier = algorithm_random_forest_classifier(train_set)
     random_forest_regressor = algorithm_random_forest_regressor(train_set)
-    
+
     regressor_results: list[tuple[Exemplo, float]] = []
     classifier_results: list[tuple[Exemplo, int]] = []
-    
+
     for example in test_set:
         classifier_features = [
-            example.q_pa, example.pulso, example.respiracao, example.gravidade
+            example.q_pa,
+            example.pulso,
+            example.respiracao,
+            example.gravidade,
         ]
         classifier_prediction = random_forest_classifier.predict([classifier_features])
         classifier_results.append((example, classifier_prediction[0]))
-        
+
         regressor_features = [example.q_pa, example.pulso, example.respiracao]
         regressor_prediction = random_forest_regressor.predict([regressor_features])
         regressor_results.append((example, regressor_prediction[0]))
@@ -73,15 +83,39 @@ def random_forest(train_set: list[Exemplo], test_set: list[Exemplo]):
 
 
 def analyse(
-    algorithm: Callable[[list[Exemplo], list[Exemplo]], tuple[list[tuple[Exemplo, float]], list[tuple[Exemplo, int]]]],
+    algorithm: Callable[
+        [list[Exemplo], list[Exemplo]],
+        tuple[list[tuple[Exemplo, float]], list[tuple[Exemplo, int]]],
+    ],
     validation: str | None,
 ) -> None:
     """
     Função para analisar o desempenho do algoritmo.
     """
     examples = read_data("./assets/treino_sinais_vitais_com_label.txt")
-    sets: list[tuple[list[Exemplo], list[Exemplo]]] = []
 
+    # Discretização dos atributos caso o problema seja de classificação, especialmente para ID3 e Random Forest
+    if algorithm.__name__ == "id3" or algorithm.__name__ == "random_forest":
+        discretization_attributes = ["q_pa", "pulso", "respiracao"]
+        discretization_methods = {
+            "q_pa": DiscretizationMethod[ARG_DISCRE_QPA.upper()],
+            "pulso": DiscretizationMethod[ARG_DISCRE_PULSO.upper()],
+            "respiracao": DiscretizationMethod[ARG_DISCRE_RESPIRACAO.upper()],
+        }
+        discretization_parameters = {
+            "q_pa": {"groups": ARG_DISCRE_QPA_GROUPS},
+            "pulso": {"groups": ARG_DISCRE_PULSO_GROUPS},
+            "respiracao": {"groups": ARG_DISCRE_RESPIRACAO_GROUPS},
+        }
+        for attr in discretization_attributes:
+            discretize_examples(
+                examples,
+                attributes=[attr],
+                method=discretization_methods[attr],
+                parameters=discretization_parameters[attr],
+            )
+
+    sets: list[tuple[list[Exemplo], list[Exemplo]]] = []
     if validation == "retencao":
         sets = generate_retencao(
             examples, {"ARG_VALIDATION_PERCENTAGE": ARG_VALIDATION_PERCENTAGE}
@@ -93,9 +127,11 @@ def analyse(
 
     classifier_results: list[tuple[Exemplo, int]] = []
     regressor_results: list[tuple[Exemplo, float]] = []
-    
+
     for i, (train_set, test_set) in enumerate(sets):
-        local_results: tuple[list[tuple[Exemplo, float]], list[tuple[Exemplo, int]]] = algorithm(train_set, test_set)
+        local_results: tuple[list[tuple[Exemplo, float]], list[tuple[Exemplo, int]]] = (
+            algorithm(train_set, test_set)
+        )
 
         classifier_results.extend(local_results[0])
         regressor_results.extend(local_results[1])
@@ -111,24 +147,19 @@ def analyse(
 
     print(f"Algoritmo: {algorithm.__name__}")
     print(f"Validação: {validation}")
-
-    print("\nResultados da classificação:")
-    print(f"Total de exemplos: {len(examples)}")
-    print(f"Total de validações: {len(classifier_results)}")
-    print(f"Total de acertos: {correct_predictions}")
-    print(f"Total de erros: {len(classifier_results) - correct_predictions}")
     print(f"Acurácia: {accuracy:.2f}%")
-    
-    print("\nResultados da regressão:")
-    print(f"Total de exemplos: {len(examples)}")
-    print(f"Total de validações: {len(regressor_results)}")
-    print(f"Diferença quadrática média: {sum((example.gravidade - prediction) ** 2 for example, prediction in regressor_results) / len(regressor_results):.2f}")
+
+    if regressor_results:
+        print(
+            f"Diferença quadrática média: {sum((example.gravidade - prediction) ** 2 for example, prediction in regressor_results) / len(regressor_results):.2f}"
+        )
 
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         algorithm: Callable[
-            [list[Exemplo], list[Exemplo]], tuple[list[tuple[Exemplo, float]], list[tuple[Exemplo, int]]]
+            [list[Exemplo], list[Exemplo]],
+            tuple[list[tuple[Exemplo, float]], list[tuple[Exemplo, int]]],
         ] = None
 
         algorithm_arg, validation = sys.argv[1], (
