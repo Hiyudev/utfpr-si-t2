@@ -1,6 +1,5 @@
 import sys
 
-from libs.models.tree import plot_decision_tree
 from libs.static import (
     ARG_DISCRE_PULSO,
     ARG_DISCRE_PULSO_GROUPS,
@@ -9,20 +8,19 @@ from libs.static import (
     ARG_DISCRE_RESPIRACAO,
     ARG_DISCRE_RESPIRACAO_GROUPS,
     ARG_KFOLD_REPETITIONS,
+    ARG_RANDOM_FOREST_CRITERION,
+    ARG_RANDOM_FOREST_ESTIMATORS,
+    ARG_RANDOM_MAX_EXAMPLES,
+    ARG_RANDOM_MAX_FEATURES,
     ARG_VALIDATION_PERCENTAGE,
 )
 from libs.models.decision_tree import DecisitionTree
-from libs.algorithms import (
-    algorithm_id3_classifier,
-    algorithm_id3_regressor,
-    algorithm_random_forest_classifier,
-    algorithm_random_forest_regressor,
-)
+from libs.models.random_forest import RandomForest
+
 from libs.data import (
     discretize_examples,
     generate_retencao,
     generate_kfold,
-    generate_discretized_data,
     DiscretizationMethod,
 )
 from libs.input import Exemplo, read_data
@@ -33,11 +31,11 @@ def id3(train_set: list[Exemplo], test_set: list[Exemplo]):
     """
     Algoritmo ID3.
     """
-    decision_tree_classifier = DecisitionTree()
+    decision_tree_classifier = DecisitionTree(
+        split_criteria="entropy",
+    )
     decision_tree_classifier.fit(train_set, ["q_pa", "pulso", "respiracao"])
     classifier_results: list[tuple[Exemplo, int]] = []
-
-    plot_decision_tree(decision_tree_classifier.root)
 
     for example in test_set:
         classifier_prediction = decision_tree_classifier.predict([example])
@@ -55,29 +53,22 @@ def random_forest(train_set: list[Exemplo], test_set: list[Exemplo]):
     Algoritmo Random Forest.
     """
     # Implementação do algoritmo Random Forest
-    random_forest_classifier = algorithm_random_forest_classifier(train_set)
-    random_forest_regressor = algorithm_random_forest_regressor(train_set)
-
-    regressor_results: list[tuple[Exemplo, float]] = []
+    random_forest_classifier = RandomForest(
+        estimators=ARG_RANDOM_FOREST_ESTIMATORS,
+        split_criteria=ARG_RANDOM_FOREST_CRITERION,
+        examples_bagging=ARG_RANDOM_MAX_EXAMPLES,
+        features_bagging=ARG_RANDOM_MAX_FEATURES,
+    )
+    random_forest_classifier.fit(train_set)
     classifier_results: list[tuple[Exemplo, int]] = []
 
     for example in test_set:
-        classifier_features = [
-            example.q_pa,
-            example.pulso,
-            example.respiracao,
-            example.gravidade,
-        ]
-        classifier_prediction = random_forest_classifier.predict([classifier_features])
+        classifier_prediction = random_forest_classifier.predict([example])
         classifier_results.append((example, classifier_prediction[0]))
-
-        regressor_features = [example.q_pa, example.pulso, example.respiracao]
-        regressor_prediction = random_forest_regressor.predict([regressor_features])
-        regressor_results.append((example, regressor_prediction[0]))
 
     results: tuple[list[tuple[Exemplo, float]], list[tuple[Exemplo, int]]] = [
         classifier_results,
-        regressor_results,
+        [],
     ]
     return results
 

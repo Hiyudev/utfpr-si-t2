@@ -1,6 +1,5 @@
 from numpy import log2
 from libs.data import Exemplo
-from libs.static import ARG_DECISION_TREE_CRITERION
 
 
 class DecisionTreeNodeConnector:
@@ -25,9 +24,9 @@ class DecisionTreeNode:
 
 
 class DecisitionTree:
-    def __init__(self):
+    def __init__(self, split_criteria):
         self.root = None
-        self.split_criteria = ARG_DECISION_TREE_CRITERION
+        self.split_criteria = split_criteria
 
     def fit(self, examples: list[Exemplo], attributes: list[str]):
         root = self._build_tree(examples, attributes)
