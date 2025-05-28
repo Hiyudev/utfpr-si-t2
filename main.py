@@ -9,6 +9,7 @@ from libs.algorithms import (
     algorithm_id3_regressor,
     algorithm_random_forest_classifier,
     algorithm_random_forest_regressor,
+    algorithm_neural_network,
 )
 from libs.data import generate_retencao, generate_kfold
 from libs.input import Exemplo, read_data
@@ -75,8 +76,8 @@ def redes(train_set: list[Exemplo], test_set: list[Exemplo]):
     """
     Algoritmo Redes Neurais
     """
-    redes_regressor = []
-    redes_classifier = []
+    redes_regressor = algorithm_neural_network(train_set, 'regressor')
+    redes_classifier = algorithm_neural_network(train_set, 'classifier')
 
     regressor_results: list[tuple[Exemplo, float]] = []
     classifier_results: list[tuple[Exemplo, int]] = []

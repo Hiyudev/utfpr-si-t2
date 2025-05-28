@@ -5,7 +5,7 @@ from libs.static import (
     ARG_RANDOM_MAX_FEATURES,
     ARG_RANDOM_MAX_SAMPLES,
 )
-from libs.redes import Rede_MLP
+from libs.redes import MLP_Network
 from libs.static import (
     ACTIVATION_FUNCTION,
     MAX_EPOCHS, 
@@ -103,18 +103,25 @@ def algorithm_random_forest_regressor(examples: list[Exemplo]) -> tree.DecisionT
     return decision_tree
 
 def algorithm_neural_network(examples: list[Exemplo], task_type: str):
-    network = Rede_MLP(task_type)
+    network = MLP_Network(task_type)
 
     features, targets = get_features_and_targets(examples, task_type)
 
-    network.create_network(inputs_size=features.shape[1],
+    if task_type == 'regressor':
+        n_output = 1
+    else:
+        n_output = NEURONS_OUTPUT_LAYER
+
+    network.create_network(inputs_size=len(features[0]),
                            n_hidden=NEURONS_PER_LAYER,
-                           n_output=NEURONS_OUTPUT_LAYER,
+                           n_output=n_output,
                            hidden_layers_size=HIDDEN_LAYERS_SIZE,
                            bias=BIAS,
                            activation=ACTIVATION_FUNCTION)
-    
-    
+
+    network.fit(features, targets, LEARNING_RATE, MAX_EPOCHS)
+
+    return network
 
     
 
