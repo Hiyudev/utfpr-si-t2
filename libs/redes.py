@@ -1,12 +1,29 @@
 import numpy as np
 import random
+from libs.input import get_features_and_targets
+
+def normalize_features_minmax(features):
+    transposed = list(zip(*features))
+
+    mins = [min(col) for col in transposed]
+    maxs = [max(col) for col in transposed]
+
+    def normalize_value(val, min_val, max_val):
+        return (val - min_val) / (max_val - min_val)
+
+    normalized = [
+        tuple(normalize_value(val, mins[i], maxs[i]) for i, val in enumerate(sample))
+        for sample in features
+    ]
+    print(normalized[0])
+    return normalized
 
 class Perceptron():
     def __init__(self, activation, inputs_size, bias=0.0):
         self.weights = [random.uniform(-1, 1) for _ in range(inputs_size)]
         self.activation = activation
         self.bias = bias
-
+        self.last_z = 0.0
         self.last_output = 0.0
 
     def activate(self, x):
@@ -67,10 +84,10 @@ class MLP_Network():
         elif self.activation == 'tanh':
             return 1 - np.tanh(x)**2
         elif self.activation == 'relu':
-            return np.where(x > 0, 1, 0)
+            return 1 if x > 0 else 0
         
     def calc_error(self, expected, predicted):
-        return sum((e - p) ** 2 for e, p in  zip(expected, predicted))
+        return sum((float(e) - float(p)) ** 2 for e, p in  zip(expected, predicted))
         
     def feed_forward(self, inputs: list):
         current_inputs = inputs
@@ -91,7 +108,7 @@ class MLP_Network():
         output_deltas = []
         for i, perceptron in enumerate(output_layer):
             error = expected_output - predicted_output[i]
-            delta = error * self.activation_derivative(perceptron.last_output)
+            delta = error * self.activation_derivative(perceptron.last_z)
             output_deltas.append(delta)
         deltas[-1] = output_deltas
 
@@ -104,7 +121,7 @@ class MLP_Network():
                     deltas[layer_index + 1][k] * next_layer[k].weights[j]
                     for k in range(len(next_layer))
                 )
-                delta = erro * self.activation_derivative(perceptron.last_output)
+                delta = erro * self.activation_derivative(perceptron.last_z)
                 current_deltas.append(delta)
             deltas[layer_index] = current_deltas
 
@@ -119,8 +136,9 @@ class MLP_Network():
                 perceptron.bias += learning_rate * deltas[l][p]
 
 
-    def fit(self, features: list[tuple], targets: list, learning_rate: float, epochs = int):
+    def fit(self, features: list[tuple], targets: list, learning_rate: float, epochs: int):
         epoch = 0
+        features = normalize_features_minmax(features)
         while epoch < epochs:
             total_error = 0
             for i, example in enumerate(features):
@@ -130,17 +148,20 @@ class MLP_Network():
                 fit_error = self.calc_error([expected_output], predicted_output)
                 total_error += fit_error
                 self.back_propagation(example, predicted_output, expected_output, learning_rate)
-            # print(f"Época {epoch + 1}/{epochs} - Erro total: {total_error:.4f}")       
+                   
             epoch += 1
     
         return total_error
     
-    def predict(self, features):
-        results = []
-        for i, example in enumerate(features):
-            output = self.feed_forward(example)
-            results.append(output)
+    def predict(self, examples: list):
+        features, targets = get_features_and_targets(examples, self.task_type)
+        predictions = []
+        for example, input_vector in zip(examples, features):
+            output = self.feed_forward(input_vector)
+            if self.task_type == "classifier":
+                prediction = output[0]
+            else:
+                prediction = output[0]
+            predictions.append((example, prediction))
 
-        return results
-                
-            
+        return predictions
