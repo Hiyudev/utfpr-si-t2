@@ -26,17 +26,9 @@ ARG_RANDOM_MAX_FEATURES = 0.5
 ARG_RANDOM_MAX_EXAMPLES = 0.2
 
 # Redes
-# Função de ativação do neuronio
-ACTIVATION_FUNCTION = 'sig'
 # Número mámimo de epocas de treinamento
 MAX_EPOCHS = 30
-# Bias ou limiar
-BIAS = 0
 # Taxa de Aprendizado
 LEARNING_RATE = 0.03
-# Número de camadas ocultas
-HIDDEN_LAYERS_SIZE = 4
-# Número de neuronios na camada de saída ()
-NEURONS_OUTPUT_LAYER = 1
-# Número de neuronios na camada oculta
-NEURONS_PER_LAYER = 5
+# Tamanho dos subconjuntos de treinamento
+BATCH_SIZE = 100

@@ -1,0 +1,46 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Execute algorithm",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "${input:option1}",
+                "${input:option2}"
+            ],
+            "python": "${workspaceFolder}/.venv/bin/python"
+        },
+        {
+            "name": "Python: Plot graphs",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "plot.py",
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/.venv/bin/python"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "option1",
+            "type": "pickString",
+            "description": "Escolha o algoritmo",
+            "options": [
+                "id3",
+                "forest",
+                "redes"
+            ]
+        },
+        {
+            "id": "option2",
+            "type": "pickString",
+            "description": "Escolha uma validação cruzada",
+            "options": [
+                "retencao",
+                "kfold",
+            ]
+        }
+    ]
+}

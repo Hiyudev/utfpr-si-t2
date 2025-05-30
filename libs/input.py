@@ -1,5 +1,15 @@
 class Exemplo:
-    def __init__ (self, id: int, p_sist: float, p_diast: float, q_pa: float, pulso: float, respiracao: float, gravidade: float, rotulo: int = -1):
+    def __init__(
+        self,
+        id: int,
+        p_sist: float,
+        p_diast: float,
+        q_pa: float,
+        pulso: float,
+        respiracao: float,
+        gravidade: float,
+        rotulo: int = -1,
+    ):
         self.id = id
         self.p_sist = p_sist
         self.p_diast = p_diast
@@ -8,9 +18,9 @@ class Exemplo:
         self.respiracao = respiracao
         self.gravidade = gravidade
         self.rotulo = rotulo
-        
+
     @property
-    def features(self) -> list[float]:
+    def features(self) -> dict[str, float]:
         return {
             "p_sist": self.p_sist,
             "p_diast": self.p_diast,
@@ -19,7 +29,8 @@ class Exemplo:
             "respiracao": self.respiracao,
             "gravidade": self.gravidade,
         }
-        
+
+
 def parse_exemplo(line: str) -> Exemplo:
     """
     Parse a line of data into an Exemplo object.
@@ -33,35 +44,20 @@ def parse_exemplo(line: str) -> Exemplo:
     respiracao = float(fields[5])
     gravidade = float(fields[6])
     rotulo = int(fields[7]) if len(fields) > 7 else -1
-    
+
     return Exemplo(id, p_sist, p_diast, q_pa, pulso, respiracao, gravidade, rotulo)
+
 
 def read_data(file_path: str) -> list[Exemplo]:
     """
     Read data from a file and return a list of Exemplo objects.
     """
-    
+
     exemplos = []
-    with open(file_path, 'r') as file:
+    with open(file_path, "r") as file:
         for line in file:
             if line.strip():
                 exemplo = parse_exemplo(line)
                 exemplos.append(exemplo)
-    
-    return exemplos
 
-def get_features_and_targets(examples: list[Exemplo], type: str):
-    if type == 'classifier':
-        features = [
-        (example.q_pa, example.pulso, example.respiracao, example.gravidade)
-        for example in examples
-    ]
-        targets = [example.rotulo for example in examples]
-        return features, targets
-    else:
-        features = [
-        (example.q_pa, example.pulso, example.respiracao)
-        for example in examples
-    ]
-        targets = [example.gravidade for example in examples]
-        return features, targets
+    return exemplos

@@ -1,5 +1,6 @@
 import sys
 
+from libs.models.redes import RedesNeurais
 from libs.static import (
     ARG_DISCRE_PULSO,
     ARG_DISCRE_PULSO_GROUPS,
@@ -13,6 +14,9 @@ from libs.static import (
     ARG_RANDOM_MAX_EXAMPLES,
     ARG_RANDOM_MAX_FEATURES,
     ARG_VALIDATION_PERCENTAGE,
+    BATCH_SIZE,
+    MAX_EPOCHS,
+    LEARNING_RATE,
 )
 from libs.models.decision_tree import DecisitionTree
 from libs.models.random_forest import RandomForest
@@ -22,9 +26,6 @@ from libs.data import (
     generate_retencao,
     generate_kfold,
     DiscretizationMethod,
-)
-from libs.algorithms import (
-    algorithm_neural_network,
 )
 from libs.data import generate_retencao, generate_kfold
 from libs.input import Exemplo, read_data
@@ -76,20 +77,35 @@ def random_forest(train_set: list[Exemplo], test_set: list[Exemplo]):
     ]
     return results
 
+
 def redes(train_set: list[Exemplo], test_set: list[Exemplo]):
     """
     Algoritmo Redes Neurais
     """
-    redes_regressor = algorithm_neural_network(train_set, 'regressor')
-    redes_classifier = algorithm_neural_network(train_set, 'classifier')
+
+    redes_regressor = RedesNeurais(
+        task_type="regressor",
+        arquitecture=[3, 2, 2, 1],
+        activations=["sigmoid", "sigmoid", "sigmoid"],
+    )
+    redes_regressor.fit(train_set, LEARNING_RATE, BATCH_SIZE, MAX_EPOCHS)
+
+    redes_classifier = RedesNeurais(
+        task_type="classifier",
+        arquitecture=[3, 2, 2, 4],
+        activations=["sigmoid", "sigmoid", "sigmoid"],
+    )
+    redes_classifier.fit(train_set, LEARNING_RATE, BATCH_SIZE, MAX_EPOCHS)
 
     regressor_results = redes_regressor.predict(test_set)
     classifier_results = redes_classifier.predict(test_set)
 
-    results:tuple[list[tuple[Exemplo, float]], list[tuple[Exemplo, int]]] = [
-        regressor_results, 
-        classifier_results]
+    results: tuple[list[tuple[Exemplo, float]], list[tuple[Exemplo, int]]] = [
+        regressor_results,
+        classifier_results,
+    ]
     return results
+
 
 def analyse(
     algorithm: Callable[
