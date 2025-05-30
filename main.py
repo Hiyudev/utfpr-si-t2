@@ -27,7 +27,8 @@ from libs.data import (
     DiscretizationMethod,
 )
 from libs.algorithms import (
-    algorithm_neural_network,
+    neural_network_classifier,
+    neural_network_regressor
 )
 from libs.data import generate_retencao, generate_kfold
 from libs.input import Exemplo, read_data
@@ -84,15 +85,28 @@ def redes(train_set: list[Exemplo], test_set: list[Exemplo]):
     """
     Algoritmo Redes Neurais
     """
-    redes_regressor = algorithm_neural_network(train_set, "regressor")
-    redes_classifier = algorithm_neural_network(train_set, "classifier")
+    network_classifier = neural_network_classifier(train_set)
+    network_regressor = neural_network_regressor(train_set)
 
-    regressor_results = redes_regressor.predict(test_set)
-    classifier_results = redes_classifier.predict(test_set)
+    regressor_results: list[tuple[Exemplo, float]] = []
+    classifier_results: list[tuple[Exemplo, int]] = []
 
+    for example in test_set:
+        classfier_features = [
+            example.q_pa, example.pulso, example.respiracao
+        ]
+        classifier_prediction = network_classifier.predict([classfier_features])
+        classifier_results.append((example, classifier_prediction[0]))
+
+        regressor_features = [
+            example.q_pa, example.pulso, example.respiracao
+        ]
+        regressor_prediction = network_regressor.predict([regressor_features])
+        regressor_results.append((example, regressor_prediction[0]))
+        
     results: tuple[list[tuple[Exemplo, float]], list[tuple[Exemplo, int]]] = [
-        regressor_results,
         classifier_results,
+        regressor_results,
     ]
     return results
 

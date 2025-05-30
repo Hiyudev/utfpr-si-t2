@@ -1,121 +1,109 @@
-from sklearn import tree, ensemble
-from libs.input import Exemplo, get_features_and_targets
-# from libs.static import (
-#     ARG_RANDOM_FOREST_TREES,
-#     ARG_RANDOM_MAX_FEATURES,
-#     ARG_RANDOM_MAX_SAMPLES,
-# )
-from libs.redes import MLP_Network
-from libs.static import (
-    ACTIVATION_FUNCTION,
-    MAX_EPOCHS, 
-    BIAS,
-    LEARNING_RATE,
-    HIDDEN_LAYERS_SIZE,
-    NEURONS_OUTPUT_LAYER,
-    NEURONS_PER_LAYER
-)
+from sklearn import neural_network
+from libs.input import Exemplo
+import warnings
+from sklearn.exceptions import ConvergenceWarning
+warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
-# def algorithm_id3_classifier(examples: list[Exemplo]) -> tree.DecisionTreeClassifier:
-#     decision_tree = tree.DecisionTreeClassifier(
-#         criterion="entropy",
-#         splitter="best",
-#         max_depth=None,
-#         min_samples_split=2,
-#         min_samples_leaf=1,
-#         min_weight_fraction_leaf=0.0,
-#         max_features=None,
-#         random_state=None,
-#         max_leaf_nodes=None,
-#         min_impurity_decrease=0.0,
-#         class_weight=None,
-#     )
+def normalize(features: list[tuple]):
+    """
+    Normaliza os valores das features de um conjunto de dados utilizando a técnica Min-Max.
 
-#     features, labels = get_features_and_targets(examples, 'classifier')
+    Cada feature (coluna) é escalada individualmente para o intervalo [0, 1], de acordo com a fórmula:
+        normalized = (valor - mínimo) / (máximo - mínimo)
 
-#     decision_tree.fit(features, labels)
-#     return decision_tree
+    Parâmetros:
+        features (list of tuple/list): Lista de amostras, onde cada amostra é uma tupla ou lista de valores numéricos.
 
-# def algorithm_id3_regressor(examples: list[Exemplo]) -> tree.DecisionTreeRegressor:
-#     decision_tree = tree.DecisionTreeRegressor(
-#         criterion="squared_error",
-#         splitter="best",
-#         max_depth=None,
-#         min_samples_split=2,
-#         min_samples_leaf=1,
-#         min_weight_fraction_leaf=0.0,
-#         max_features=None,
-#         random_state=None,
-#         max_leaf_nodes=None,
-#         min_impurity_decrease=0.0,
-#     )
+    Retorna:
+        list of tuple: Lista de amostras normalizadas, com os valores das features no intervalo [0, 1].
 
-#     features, results = get_features_and_targets(examples, 'regressor')
+    Exemplo:
+        Entrada: [(2, 10), (4, 20), (6, 30)]
+        Saída: [(0.0, 0.0), (0.5, 0.5), (1.0, 1.0)]
+    """
+    transposed = list(zip(*features))
 
-#     decision_tree.fit(features, results)
-#     return decision_tree
+    mins = [min(col) for col in transposed]
+    maxs = [max(col) for col in transposed]
 
+    def normalize_value(val, min_val, max_val):
+        return (val - min_val) / (max_val - min_val)
 
-# def algorithm_random_forest_classifier(examples: list[Exemplo]) -> tree.DecisionTreeClassifier:
-#     decision_tree = ensemble.RandomForestClassifier(
-#         n_estimators=ARG_RANDOM_FOREST_TREES,
-#         criterion="entropy",
-#         max_depth=None,
-#         min_samples_split=2,
-#         min_samples_leaf=1,
-#         min_weight_fraction_leaf=0.0,
-#         max_features=ARG_RANDOM_MAX_FEATURES,
-#         max_leaf_nodes=None,
-#         min_impurity_decrease=0.0,
-#         bootstrap=True,
-#         oob_score=False,
-#         n_jobs=None,
-#         random_state=None,
-#         max_samples=ARG_RANDOM_MAX_SAMPLES,
-#     )
+    normalized = [
+        tuple(
+            normalize_value(val, mins[i], maxs[i]) for i, val in enumerate(sample)
+        )
+        for sample in features
+    ]
 
-#     features, labels = get_features_and_targets(examples, 'classifier')
+    return normalized
 
-#     decision_tree.fit(features, labels)
-#     return decision_tree
+def neural_network_classifier(examples: list[Exemplo]):
+    network = neural_network.MLPClassifier(
+        hidden_layer_sizes=(2,2),
+        activation="logistic",
+        solver="sgd",
+        alpha=0.0001,
+        batch_size="auto",
+        learning_rate="constant",
+        learning_rate_init=0.001,
+        max_iter=200,
+        shuffle=True,
+        random_state=None,
+        tol=0.0001,
+        verbose=False,
+        warm_start=False,
+        momentum=0.9,
+        nesterovs_momentum=False,
+        early_stopping=False,
+        validation_fraction=0,
+        n_iter_no_change=10,
+    )
 
-# def algorithm_random_forest_regressor(examples: list[Exemplo]) -> tree.DecisionTreeRegressor:
-#     decision_tree = ensemble.RandomForestRegressor(
-#         n_estimators=ARG_RANDOM_FOREST_TREES,
-#         criterion="squared_error",
-#         max_depth=None,
-#         min_samples_split=2,
-#         min_samples_leaf=1,
-#         min_weight_fraction_leaf=0.0,
-#         max_features=ARG_RANDOM_MAX_FEATURES,
-#         max_leaf_nodes=None,
-#         min_impurity_decrease=0.0,
-#         bootstrap=True,
-#         oob_score=False,
-#         n_jobs=None,
-#         random_state=None,
-#         max_samples=ARG_RANDOM_MAX_SAMPLES,
-#     )
+    features = [
+        (example.q_pa, example.pulso, example.respiracao)
+        for example in examples
+    ]
 
-#     features, results = get_features_and_targets(examples, 'regressor')
+    labels = [example.rotulo for example in examples]
 
-#     decision_tree.fit(features, results)
-#     return decision_tree
+    features = normalize(features)
 
-def algorithm_neural_network(examples: list[Exemplo], task_type: str):
-    network = MLP_Network(task_type)
+    network.fit(features, labels)
+    return network
 
-    features, targets = get_features_and_targets(examples, task_type)
+def neural_network_regressor(examples: list[Exemplo]):
+    network = neural_network.MLPRegressor(
+        hidden_layer_sizes=(2,2),
+        activation="logistic",
+        solver="sgd",
+        alpha=0.0001,
+        batch_size="auto",
+        learning_rate="constant",
+        learning_rate_init=0.001,
+        max_iter=200,
+        shuffle=True,
+        random_state=None,
+        tol=0.0001,
+        verbose=False,
+        warm_start=False,
+        momentum=0.9,
+        nesterovs_momentum=False,
+        early_stopping=False,
+        validation_fraction=0,
+        n_iter_no_change=10,
+    )
 
-    network.create_network(inputs_size=len(features[0]),
-                           n_hidden=NEURONS_PER_LAYER,
-                           n_output=NEURONS_OUTPUT_LAYER,
-                           hidden_layers_size=HIDDEN_LAYERS_SIZE,
-                           bias=BIAS,
-                           activation=ACTIVATION_FUNCTION)
+    features = [
+        (example.q_pa, example.pulso, example.respiracao)
+        for example in examples
+    ]
 
-    network.fit(features, targets, LEARNING_RATE, MAX_EPOCHS)
+    features = normalize(features)
 
+    results = [example.gravidade for example in examples]
+
+    network.fit(features, results)
     return network
 
     
