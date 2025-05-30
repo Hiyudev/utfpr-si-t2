@@ -1,3 +1,6 @@
+# Repetições totais
+ARG_TOTAL_REPETITIONS = 100
+
 # Validação cruzada
 # Porcentagem de exemplos utilizados para compor o conjunto de validação
 ARG_VALIDATION_PERCENTAGE = 0.5

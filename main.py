@@ -1,4 +1,6 @@
 import sys
+import numpy as np
+import concurrent.futures
 
 from libs.static import (
     ARG_DISCRE_PULSO,
@@ -12,6 +14,7 @@ from libs.static import (
     ARG_RANDOM_FOREST_ESTIMATORS,
     ARG_RANDOM_MAX_EXAMPLES,
     ARG_RANDOM_MAX_FEATURES,
+    ARG_TOTAL_REPETITIONS,
     ARG_VALIDATION_PERCENTAGE,
 )
 from libs.models.decision_tree import DecisitionTree
@@ -76,20 +79,23 @@ def random_forest(train_set: list[Exemplo], test_set: list[Exemplo]):
     ]
     return results
 
+
 def redes(train_set: list[Exemplo], test_set: list[Exemplo]):
     """
     Algoritmo Redes Neurais
     """
-    redes_regressor = algorithm_neural_network(train_set, 'regressor')
-    redes_classifier = algorithm_neural_network(train_set, 'classifier')
+    redes_regressor = algorithm_neural_network(train_set, "regressor")
+    redes_classifier = algorithm_neural_network(train_set, "classifier")
 
     regressor_results = redes_regressor.predict(test_set)
     classifier_results = redes_classifier.predict(test_set)
 
-    results:tuple[list[tuple[Exemplo, float]], list[tuple[Exemplo, int]]] = [
-        regressor_results, 
-        classifier_results]
+    results: tuple[list[tuple[Exemplo, float]], list[tuple[Exemplo, int]]] = [
+        regressor_results,
+        classifier_results,
+    ]
     return results
+
 
 def analyse(
     algorithm: Callable[
@@ -124,44 +130,98 @@ def analyse(
                 parameters=discretization_parameters[attr],
             )
 
-    sets: list[tuple[list[Exemplo], list[Exemplo]]] = []
-    if validation == "retencao":
-        sets = generate_retencao(
-            examples, {"ARG_VALIDATION_PERCENTAGE": ARG_VALIDATION_PERCENTAGE}
-        )
-    elif validation == "kfold":
-        sets = generate_kfold(
-            examples, {"ARG_KFOLD_REPETITIONS": ARG_KFOLD_REPETITIONS}
-        )
+    total_classifier_results: list[tuple[Exemplo, int]] = []
+    total_regressor_results: list[tuple[Exemplo, float]] = []
 
-    classifier_results: list[tuple[Exemplo, int]] = []
-    regressor_results: list[tuple[Exemplo, float]] = []
+    def process_set(args):
+        train_set, test_set = args
+        return algorithm(train_set, test_set)
 
-    for i, (train_set, test_set) in enumerate(sets):
-        local_results: tuple[list[tuple[Exemplo, float]], list[tuple[Exemplo, int]]] = (
-            algorithm(train_set, test_set)
-        )
+    for k in range(ARG_TOTAL_REPETITIONS):
+        print(f"Repetição {k + 1} de {ARG_TOTAL_REPETITIONS}")
 
-        classifier_results.extend(local_results[0])
-        regressor_results.extend(local_results[1])
+        sets: list[tuple[list[Exemplo], list[Exemplo]]] = []
+        if validation == "retencao":
+            sets = generate_retencao(
+                examples, {"ARG_VALIDATION_PERCENTAGE": ARG_VALIDATION_PERCENTAGE}
+            )
+        elif validation == "kfold":
+            sets = generate_kfold(
+                examples, {"ARG_KFOLD_REPETITIONS": ARG_KFOLD_REPETITIONS}
+            )
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Processa cada conjunto de treino/teste em paralelo
+            futures = [executor.submit(process_set, s) for s in sets]
+            for future in concurrent.futures.as_completed(futures):
+                local_results = future.result()
+                # Filter out None predictions for classifier results
+                filtered_classifier_results = [
+                    (ex, pred) for ex, pred in local_results[0] if pred is not None
+                ]
+                total_classifier_results.extend(filtered_classifier_results)
+                # Filter out None predictions for regressor results
+                filtered_regressor_results = [
+                    (ex, pred) for ex, pred in local_results[1] if pred is not None
+                ]
+                total_regressor_results.extend(filtered_regressor_results)
 
     # Analisa os resultados
-    correct_predictions = 0
+    true_positives = [0, 0, 0, 0]
+    true_negatives = [0, 0, 0, 0]
+    false_positives = [0, 0, 0, 0]
+    false_negatives = [0, 0, 0, 0]
 
-    for example, prediction in classifier_results:
-        if example.rotulo == prediction:
-            correct_predictions += 1
+    for example, prediction in total_classifier_results:
+        # Para cada resultado possivel (0, 1, 2, 3), contabiliza os acertos e erros
+        real_label = example.rotulo
+        predicted_label = prediction
 
-    accuracy = correct_predictions / len(classifier_results) * 100
+        if real_label == predicted_label:
+            true_positives[real_label - 1] += 1
+        elif real_label != predicted_label:
+            false_positives[predicted_label - 1] += 1
+            false_positives[real_label - 1] += 1
+            false_negatives[real_label - 1] += 1
+            false_negatives[predicted_label - 1] += 1
+        else:
+            true_negatives[real_label - 1] += 1
+
+    accuracy = sum(true_positives) / len(total_classifier_results) * 100
+    # Precision: average over classes, avoid division by zero
+    precisions = []
+    for i in range(len(true_positives)):
+        tp = true_positives[i]
+        fp = false_positives[i]
+        if tp + fp > 0:
+            precisions.append(tp / (tp + fp))
+        else:
+            precisions.append(0.0)
+    precision = np.mean(precisions) * 100
+    loss = np.mean(
+        [
+            (example.rotulo - prediction) ** 2
+            for example, prediction in total_classifier_results
+        ]
+    )
 
     print(f"Algoritmo: {algorithm.__name__}")
     print(f"Validação: {validation}")
     print(f"Acurácia: {accuracy:.2f}%")
+    print(f"Precisão: {precision:.2f}%")
+    print(f"Perda: {loss:.2f}")
 
-    if regressor_results:
-        print(
-            f"Diferença quadrática média: {sum((example.gravidade - prediction) ** 2 for example, prediction in regressor_results) / len(regressor_results):.2f}"
+    if len(total_regressor_results) > 0:
+        rmse = np.sqrt(
+            np.mean(
+                [
+                    (example.rotulo - prediction) ** 2
+                    for example, prediction in total_regressor_results
+                ]
+            )
         )
+
+        print(f"RMSE: {rmse:.2f}")
 
 
 if __name__ == "__main__":
